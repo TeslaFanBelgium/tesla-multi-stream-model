@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+    <title>Tesla Multi-Stream Model 2026–2040 (Smooth PE Transition)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 12px; background: #f8f9fa; color: #333; line-height: 1.45; }
+        h1 { font-size: 1.7rem; margin: 0.8rem 0; color: #1a1a1a; }
+        h2 { font-size: 1.35rem; margin: 1.2rem 0 0.6rem; }
+        .container { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .target-fleet { background: #e6ffe6; padding: 12px; border-radius: 8px; margin: 16px 0; border: 1px solid #b3ffb3; }
+        .target-fleet input { width: 80px; margin: 0 4px; }
+        .target-fleet label { display: inline; font-weight: normal; }
+        .target-fleet button { padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .target-fleet button:hover { background: #218838; }
+        .stream-toggle { margin: 8px 0 4px; font-weight: bold; }
+        .stream-toggle input { width: auto; margin-right: 8px; vertical-align: middle; }
+        .assumptions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .assumption-item { background: #f8f9fa; padding: 10px; border-radius: 8px; font-size: 0.95rem; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.85rem; color: #444; }
+        input { width: 100%; max-width: 140px; padding: 8px 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; text-align: right; box-sizing: border-box; }
+        .table-wrapper { overflow-x: auto; margin: 16px 0; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; min-width: 1600px; border-collapse: collapse; font-size: 0.88rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #007bff; color: white; position: sticky; top: 0; z-index: 1; }
+        .fleet { font-weight: bold; color: #006400; }
+        .share-price { font-weight: bold; color: #8b008b; }
+        .market-cap { font-weight: bold; color: #006d77; background: rgba(0,109,119,0.06); }
+        .portfolio-value { font-weight: bold; color: #d63384; background: rgba(220,53,132,0.06); }
+        .portfolio-eur { font-weight: bold; color: #007bff; }
+        .annual-tax { font-weight: bold; color: #dc3545; }
+        .opt-contrib { background: rgba(31,119,180,0.08); }
+        .rt-contrib  { background: rgba(255,127,14,0.08); }
+        .rtr-contrib { background: rgba(148,103,189,0.08); }
+        .energy-contrib { background: rgba(44,160,44,0.08); }
+        .chart-container { margin: 32px 0 48px; background: white; padding: 12px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); height: 320px; position: relative; }
+        .chart-container canvas { max-height: 100% !important; width: 100% !important; }
+        #results { margin-top: 32px; padding: 20px; background: #e6f3ff; border-radius: 12px; border: 1px solid #b3d4fc; }
+        #results h3 { margin: 0 0 12px; color: #1a5bb6; font-size: 1.3rem; }
+        #results .stream { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #d0e0ff; }
+        #results .stream:last-child { border-bottom: none; }
+        #results p { margin: 8px 0; font-size: 1.05rem; }
+        #results .combined { margin-top: 28px; padding-top: 20px; border-top: 2px solid #006d77; background: rgba(0,109,119,0.04); border-radius: 8px; }
+        #results .combined p { font-size: 1.25rem; font-weight: 700; color: #006d77; }
+        #results .portfolio { font-size: 1.4rem !important; color: #d63384; margin-top: 16px; padding: 12px; background: rgba(220,53,132,0.08); border-radius: 8px; }
+        @media (max-width: 720px) {
+            body { margin: 8px; font-size: 0.94rem; }
+            .target-fleet { font-size: 0.95rem; text-align: center; }
+            .target-fleet label { display: block; margin: 6px 0; }
+            .chart-container { height: 280px; margin-bottom: 40px; }
+            table { font-size: 0.84rem; min-width: 1800px; }
+            .assumptions { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tesla Multi-Stream Model (2026–2040)</h1>
+
+        <div class="target-fleet">
+            <strong>Quick-set 2040 targets:</strong><br>
+            <label>Optimus (millions): <input type="number" id="target_opt_fleet" value="10" step="1" min="0"></label>
+            <label>Ramp by: <input type="number" id="opt_ramp_year" value="2033" min="2026" max="2040"></label>
+            <label>Growth %/yr: <input type="number" id="opt_growth_pct" value="10" step="1" min="0"></label><br>
+            <label>Robotaxi (millions): <input type="number" id="target_rt_fleet" value="3" step="1" min="0"></label>
+            <label>Ramp by: <input type="number" id="rt_ramp_year" value="2032" min="2026" max="2040"></label>
+            <label>Growth %/yr: <input type="number" id="rt_growth_pct" value="10" step="1" min="0"></label><br>
+            <label>Robotruck (thousands): <input type="number" id="target_rtr_fleet" value="50" step="5" min="0"></label>
+            <label>Ramp by: <input type="number" id="rtr_ramp_year" value="2035" min="2026" max="2040"></label>
+            <label>Growth %/yr: <input type="number" id="rtr_growth_pct" value="6" step="1" min="0"></label><br>
+            <label>Energy Storage (GWh/yr): <input type="number" id="target_energy_gwh" value="600" step="50" min="0"></label>
+            <label>Ramp by: <input type="number" id="energy_ramp_year" value="2032" min="2026" max="2040"></label>
+            <label>Growth %/yr: <input type="number" id="energy_growth_pct" value="15" step="5" min="0"></label><br>
+            <button id="applyTargetsBtn">Apply → Auto-fill ramps</button>
+            <p style="font-size:0.85rem; margin-top:8px; color:#006400;">
+                Ramp completes by chosen year, then grows at given %/yr. Set target=0 to disable stream.
+            </p>
+        </div>
+
+        <p style="color:#555; font-size:0.9rem; margin-bottom:1rem;">
+            Includes recurring operations + one-time hardware sales profit<br>
+            PE transitions gradually over 5 years after last ramp ends.
+        </p>
+
+        <div class="assumptions">
+            <div class="assumption-item"><label>Diluted Shares (billions)</label><input type="number" id="shares_out" value="3.52" step="0.01"></div>
+            <div class="assumption-item"><label>Growth Phase PE</label><input type="number" id="multiple_growth" value="40" step="5"></div>
+            <div class="assumption-item"><label>Mature Phase PE</label><input type="number" id="multiple_mature" value="25" step="5"></div>
+            <div class="assumption-item"><label>Your Shares Owned</label><input type="number" id="your_shares" value="380" step="1"></div>
+        </div>
+
+        <h2>Optimus</h2>
+        <div class="stream-toggle">
+            <input type="checkbox" id="opt_enable" checked> <label for="opt_enable">Enable Optimus</label>
+        </div>
+        <div class="assumptions">
+            <div class="assumption-item"><label>Effective $/hr</label><input type="number" id="opt_hourly" value="2" step="0.1"></div>
+            <div class="assumption-item"><label>Hours/Day</label><input type="number" id="opt_hours_day" value="21" step="1"></div>
+            <div class="assumption-item"><label>Days/Year</label><input type="number" id="opt_days_year" value="360" step="1"></div>
+            <div class="assumption-item"><label>Sales Price ($)</label><input type="number" id="opt_sales_price" value="20000" step="1000"></div>
+            <div class="assumption-item"><label>Gross Margin %</label><input type="number" id="opt_sales_margin" value="7" step="1" min="0" max="100"></div>
+        </div>
+
+        <h2>Robotaxi</h2>
+        <div class="stream-toggle">
+            <input type="checkbox" id="rt_enable" checked> <label for="rt_enable">Enable Robotaxi</label>
+        </div>
+        <div class="assumptions">
+            <div class="assumption-item"><label>Avg km/day</label><input type="number" id="rt_mileage_km" value="350" step="10"></div>
+            <div class="assumption-item"><label>Net $/mile</label><input type="number" id="rt_earnings_mile" value="0.2" step="0.01"></div>
+            <div class="assumption-item"><label>Days/Year</label><input type="number" id="rt_days_year" value="360" step="1"></div>
+            <div class="assumption-item"><label>Sales Price ($)</label><input type="number" id="rt_sales_price" value="25000" step="1000"></div>
+            <div class="assumption-item"><label>Gross Margin %</label><input type="number" id="rt_sales_margin" value="7" step="1" min="0" max="100"></div>
+        </div>
+
+        <h2>Robotruck</h2>
+        <div class="stream-toggle">
+            <input type="checkbox" id="rtr_enable" checked> <label for="rtr_enable">Enable Robotruck</label>
+        </div>
+        <div class="assumptions">
+            <div class="assumption-item"><label>Avg km/day</label><input type="number" id="rtr_mileage_km" value="500" step="50"></div>
+            <div class="assumption-item"><label>Net $/mile</label><input type="number" id="rtr_earnings_mile" value="2" step="0.1"></div>
+            <div class="assumption-item"><label>Days/Year</label><input type="number" id="rtr_days_year" value="360" step="1"></div>
+            <div class="assumption-item"><label>Sales Price ($)</label><input type="number" id="rtr_sales_price" value="250000" step="10000"></div>
+            <div class="assumption-item"><label>Gross Margin %</label><input type="number" id="rtr_sales_margin" value="7" step="1" min="0" max="100"></div>
+        </div>
+
+        <h2>Energy Storage (Megapack + Autobidder/VPP)</h2>
+        <div class="stream-toggle">
+            <input type="checkbox" id="energy_enable" checked> <label for="energy_enable">Enable Energy Storage</label>
+        </div>
+        <div class="assumptions">
+            <div class="assumption-item"><label>Hardware Revenue $/GWh</label><input type="number" id="energy_hw_rev_per_gwh" value="280000000" step="10000000"></div>
+            <div class="assumption-item"><label>Hardware Gross Margin %</label><input type="number" id="energy_hw_margin_pct" value="32" step="1"></div>
+            <div class="assumption-item"><label>Recurring $/GWh installed/yr</label><input type="number" id="energy_recurring_per_gwh_yr" value="3500000" step="500000"></div>
+            <div class="assumption-item"><label>Recurring Gross Margin %</label><input type="number" id="energy_recurring_margin_pct" value="80" step="5"></div>
+        </div>
+
+        <h2>Currency & Tax Assumptions (Belgium)</h2>
+        <div class="assumptions">
+            <div class="assumption-item"><label>Current TSLA Price ($)</label><input type="number" id="current_tsla_price" value="439" step="1"><button onclick="fetchTslaPrice()">Update Price</button></div>
+            <div class="assumption-item"><label>USD to EUR Rate</label><input type="number" id="usd_eur_rate" value="0.86" step="0.0001"><button onclick="fetchExchangeRate()">Update Rate</button></div>
+            <div class="assumption-item"><label>Average Buy Price (€/share)</label><input type="number" id="avg_buy_price" value="280" step="1"></div>
+            <div class="assumption-item"><label>Capital Gains Tax %</label><input type="number" id="cgt_rate" value="10" step="1"></div>
+            <div class="assumption-item"><label>CGT Exemption (€)</label><input type="number" id="cgt_exemption" value="10000" step="1000"></div>
+            <div class="assumption-item"><label>Annual Wealth Tax %</label><input type="number" id="annual_tax_rate" value="0.30" step="0.01"></div>
+            <div class="assumption-item"><label>Tax Threshold (€)</label><input type="number" id="tax_threshold" value="1000000" step="100000"></div>
+        </div>
+
+        <h2>Production, Fleet & Valuation</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Optimus Prod.</th>
+                        <th class="fleet">Optimus Fleet</th>
+                        <th>Robotaxi Prod.</th>
+                        <th class="fleet">Robotaxi Fleet</th>
+                        <th>Robotruck Prod.</th>
+                        <th class="fleet">Robotruck Fleet</th>
+                        <th>Energy Deploy (GWh)</th>
+                        <th class="fleet">Energy Cum. GWh</th>
+                        <th>Optimus $/share</th>
+                        <th>Robotaxi $/share</th>
+                        <th>Robotruck $/share</th>
+                        <th>Energy $/share</th>
+                        <th class="share-price">Total Share Price ($)</th>
+                        <th class="market-cap">Market Cap ($T)</th>
+                        <th class="portfolio-value">Your Portfolio ($)</th>
+                        <th class="portfolio-eur">Portfolio (€)</th>
+                        <th class="annual-tax">Annual Tax (€)</th>
+                    </tr>
+                </thead>
+                <tbody id="yearTable"></tbody>
+            </table>
+        </div>
+
+        <button id="exportCsvBtn" style="margin: 16px 0; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
+            Export Full Model (CSV) – Assumptions + Table
+        </button>
+
+        <!-- Charts -->
+        <div class="chart-container"><h3>Cumulative Fleet & Energy Growth</h3><canvas id="fleetLineChart"></canvas></div>
+        <div class="chart-container"><h3>Optimus – Annual + Cumulative</h3><canvas id="optProductionChart"></canvas></div>
+        <div class="chart-container"><h3>Robotaxi – Annual + Cumulative</h3><canvas id="rtProductionChart"></canvas></div>
+        <div class="chart-container"><h3>Robotruck – Annual + Cumulative</h3><canvas id="rtrProductionChart"></canvas></div>
+        <div class="chart-container"><h3>Energy Storage – Annual GWh + Cumulative</h3><canvas id="energyProductionChart"></canvas></div>
+        <div class="chart-container"><h3>Implied Share Price Evolution</h3><canvas id="sharePriceChart"></canvas></div>
+        <div class="chart-container"><h3>Projected Portfolio Value (€) – 2026–2040</h3><canvas id="netPortfolioEurChart"></canvas></div>
+        <div class="chart-container"><h3 id="optRevTitle">Optimus Revenue ($B)</h3><canvas id="optRevenueChart"></canvas></div>
+        <div class="chart-container"><h3 id="rtRevTitle">Robotaxi Revenue ($B)</h3><canvas id="rtRevenueChart"></canvas></div>
+        <div class="chart-container"><h3 id="rtrRevTitle">Robotruck Revenue ($B)</h3><canvas id="rtrRevenueChart"></canvas></div>
+        <div class="chart-container"><h3 id="energyRevTitle">Energy Storage Revenue ($B)</h3><canvas id="energyRevenueChart"></canvas></div>
+        <div class="chart-container"><h3>Combined Hardware Sales Profit ($B)</h3><canvas id="salesProfitChart"></canvas></div>
+
+        <div id="results">
+            <h3>2040 Valuation Breakdown</h3>
+            <div class="stream">
+                <strong>Optimus</strong>
+                <p>Valuation Per Share (recurring + growth): <span id="optPerShare">$0</span></p>
+                <p>Hardware Sales Profit Per Share: <span id="optSalesPerShare">$0</span></p>
+            </div>
+            <div class="stream">
+                <strong>Robotaxi</strong>
+                <p>Valuation Per Share (recurring + growth): <span id="rtPerShare">$0</span></p>
+                <p>Hardware Sales Profit Per Share: <span id="rtSalesPerShare">$0</span></p>
+            </div>
+            <div class="stream">
+                <strong>Robotruck</strong>
+                <p>Valuation Per Share (recurring + growth): <span id="rtrPerShare">$0</span></p>
+                <p>Hardware Sales Profit Per Share: <span id="rtrSalesPerShare">$0</span></p>
+            </div>
+            <div class="stream">
+                <strong>Energy Storage</strong>
+                <p>Valuation Per Share (recurring + growth): <span id="energyPerShare">$0</span></p>
+                <p>Hardware Sales Profit Per Share: <span id="energySalesPerShare">$0</span></p>
+            </div>
+            <div class="combined">
+                <h3>Combined Results (2040)</h3>
+                <p>Total Implied Share Price: <span id="combinedPerShare">$0</span></p>
+                <p class="portfolio">Your Portfolio Value (at <span id="yourSharesDisplay">380</span> shares): <span id="portfolioValue">$0</span></p>
+                <p>Portfolio Value (EUR): <span id="portfolioEur">€0</span></p>
+                <p>Gross Gain (EUR): <span id="gainEur">€0</span></p>
+                <p>CGT Due (EUR): <span id="cgtDue">€0</span></p>
+                <p>Net Portfolio after CGT (EUR): <span id="netEur">€0</span></p>
+                <p>Annual Wealth Tax if held (EUR): <span id="annualTax">€0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const startYear = 2026;
+        const endYear = 2040;
+        const years = endYear - startYear + 1;
+        const tableBody = document.getElementById('yearTable');
+        const STORAGE_KEY = 'tesla_model_v5_smooth_pe';
+
+        const yearLabels = Array.from({length: years}, (_, i) => startYear + i);
+
+        let fleetLineChart, optProdChart, rtProdChart, rtrProdChart, energyProdChart, sharePriceChart,
+            netPortfolioEurChart, optRevChart, rtRevChart, rtrRevChart, energyRevChart, salesProfitChart;
+
+        const PE_TRANSITION_YEARS = 5;
+
+        function initCharts() {
+            fleetLineChart = new Chart(document.getElementById('fleetLineChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [
+                    { label: 'Optimus Fleet', data: [], borderColor: '#1f77b4', fill: true, tension: 0.1 },
+                    { label: 'Robotaxi Fleet', data: [], borderColor: '#ff7f0e', fill: true, tension: 0.1 },
+                    { label: 'Robotruck Fleet', data: [], borderColor: '#9467bd', fill: true, tension: 0.1 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            optProdChart = new Chart(document.getElementById('optProductionChart'), {
+                type: 'bar', data: { labels: yearLabels, datasets: [
+                    { label: 'Optimus Annual Prod.', data: [], backgroundColor: '#aec7e8' },
+                    { label: 'Cumulative', data: [], type: 'line', borderColor: '#1f77b4', pointRadius: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            rtProdChart = new Chart(document.getElementById('rtProductionChart'), {
+                type: 'bar', data: { labels: yearLabels, datasets: [
+                    { label: 'Robotaxi Annual Prod.', data: [], backgroundColor: '#ffbb78' },
+                    { label: 'Cumulative', data: [], type: 'line', borderColor: '#ff7f0e', pointRadius: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            rtrProdChart = new Chart(document.getElementById('rtrProductionChart'), {
+                type: 'bar', data: { labels: yearLabels, datasets: [
+                    { label: 'Robotruck Annual Prod.', data: [], backgroundColor: '#d7bde2' },
+                    { label: 'Cumulative', data: [], type: 'line', borderColor: '#9467bd', pointRadius: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            energyProdChart = new Chart(document.getElementById('energyProductionChart'), {
+                type: 'bar', data: { labels: yearLabels, datasets: [
+                    { label: 'Energy Annual GWh', data: [], backgroundColor: '#98df8a' },
+                    { label: 'Cumulative GWh', data: [], type: 'line', borderColor: '#2ca02c', pointRadius: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            sharePriceChart = new Chart(document.getElementById('sharePriceChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [
+                    { label: 'Combined Share Price ($)', data: [], borderColor: '#8b008b', fill: true, tension: 0.2 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            netPortfolioEurChart = new Chart(document.getElementById('netPortfolioEurChart'), {
+                type: 'line',
+                data: { labels: yearLabels, datasets: [{
+                    label: 'Projected Portfolio Value (€)',
+                    data: [],
+                    borderColor: '#006400',
+                    backgroundColor: 'rgba(0, 100, 0, 0.12)',
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 3
+                }]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Portfolio Value (€)' } }, x: { title: { display: true, text: 'Year' } } }, plugins: { tooltip: { callbacks: { label: ctx => '€' + Math.round(ctx.parsed.y).toLocaleString() } } } }
+            });
+
+            optRevChart = new Chart(document.getElementById('optRevenueChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [{ label: 'Optimus Revenue ($B)', data: [], borderColor: '#2ca02c', fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            rtRevChart = new Chart(document.getElementById('rtRevenueChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [{ label: 'Robotaxi Revenue ($B)', data: [], borderColor: '#d62728', fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            rtrRevChart = new Chart(document.getElementById('rtrRevenueChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [{ label: 'Robotruck Revenue ($B)', data: [], borderColor: '#bcbd22', fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            energyRevChart = new Chart(document.getElementById('energyRevenueChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [{ label: 'Energy Storage Revenue ($B)', data: [], borderColor: '#17becf', fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+
+            salesProfitChart = new Chart(document.getElementById('salesProfitChart'), {
+                type: 'line', data: { labels: yearLabels, datasets: [{ label: 'Combined Hardware Sales Profit ($B)', data: [], borderColor: '#ff7f0e', fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function buildTable() {
+            for (let i = 0; i < years; i++) {
+                const year = startYear + i;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${year}</td>
+                    <td><input type="number" class="opt_prod" data-year="${year}" value="0" step="100000" min="0"></td>
+                    <td class="opt_fleet">0</td>
+                    <td><input type="number" class="rt_prod" data-year="${year}" value="0" step="100000" min="0"></td>
+                    <td class="rt_fleet">0</td>
+                    <td><input type="number" class="rtr_prod" data-year="${year}" value="0" step="100" min="0"></td>
+                    <td class="rtr_fleet">0</td>
+                    <td><input type="number" class="energy_gwh" data-year="${year}" value="0" step="10" min="0"></td>
+                    <td class="energy_cum">0</td>
+                    <td class="opt-contrib yearly-opt-contrib">—</td>
+                    <td class="rt-contrib yearly-rt-contrib">—</td>
+                    <td class="rtr-contrib yearly-rtr-contrib">—</td>
+                    <td class="energy-contrib yearly-energy-contrib">—</td>
+                    <td class="share-price yearly-price">—</td>
+                    <td class="market-cap yearly-marketcap">—</td>
+                    <td class="portfolio-value yearly-portfolio">—</td>
+                    <td class="portfolio-eur yearly-portfolio-eur">—</td>
+                    <td class="annual-tax yearly-annual-tax">—</td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+
+        document.getElementById('applyTargetsBtn').addEventListener('click', () => {
+            const targetOptM   = parseFloat(document.getElementById('target_opt_fleet').value) || 0;
+            const optRampYear  = parseInt(document.getElementById('opt_ramp_year').value) || 2040;
+            const optGrowthPct = parseFloat(document.getElementById('opt_growth_pct').value) || 0;
+
+            const targetRtM    = parseFloat(document.getElementById('target_rt_fleet').value) || 0;
+            const rtRampYear   = parseInt(document.getElementById('rt_ramp_year').value) || 2040;
+            const rtGrowthPct  = parseFloat(document.getElementById('rt_growth_pct').value) || 0;
+
+            const targetRtrK   = parseFloat(document.getElementById('target_rtr_fleet').value) || 0;
+            const rtrRampYear  = parseInt(document.getElementById('rtr_ramp_year').value) || 2040;
+            const rtrGrowthPct = parseFloat(document.getElementById('rtr_growth_pct').value) || 0;
+
+            const targetEnergyGWh = parseFloat(document.getElementById('target_energy_gwh').value) || 0;
+            const energyRampYear  = parseInt(document.getElementById('energy_ramp_year').value) || 2040;
+            const energyGrowthPct = parseFloat(document.getElementById('energy_growth_pct').value) || 0;
+
+            const optInputs    = document.querySelectorAll('.opt_prod');
+            const rtInputs     = document.querySelectorAll('.rt_prod');
+            const rtrInputs    = document.querySelectorAll('.rtr_prod');
+            const energyInputs = document.querySelectorAll('.energy_gwh');
+
+            optInputs.forEach(el => el.value = 0);
+            rtInputs.forEach(el => el.value = 0);
+            rtrInputs.forEach(el => el.value = 0);
+            energyInputs.forEach(el => el.value = 0);
+
+            if (targetOptM > 0) {
+                const target = targetOptM * 1e6;
+                const rampY = optRampYear - startYear + 1;
+                let prod = target / Math.pow(1.4, rampY - 1);
+                for (let i = 0; i < rampY; i++) {
+                    optInputs[i].value = Math.round(prod / 10000) * 10000;
+                    prod *= 1.4;
+                }
+                let last = parseFloat(optInputs[rampY - 1].value) || 0;
+                for (let i = rampY; i < years; i++) {
+                    last *= (1 + optGrowthPct / 100);
+                    optInputs[i].value = Math.round(last / 10000) * 10000;
+                }
+            }
+
+            if (targetRtM > 0) {
+                const target = targetRtM * 1e6;
+                const rampY = rtRampYear - startYear + 1;
+                let prod = target / Math.pow(1.4, rampY - 1);
+                for (let i = 0; i < rampY; i++) {
+                    rtInputs[i].value = Math.round(prod / 1000) * 1000;
+                    prod *= 1.4;
+                }
+                let last = parseFloat(rtInputs[rampY - 1].value) || 0;
+                for (let i = rampY; i < years; i++) {
+                    last *= (1 + rtGrowthPct / 100);
+                    rtInputs[i].value = Math.round(last / 1000) * 1000;
+                }
+            }
+
+            if (targetRtrK > 0) {
+                const target = targetRtrK * 1e3;
+                const rampY = rtrRampYear - startYear + 1;
+                let prod = target / Math.pow(1.4, rampY - 1);
+                for (let i = 0; i < rampY; i++) {
+                    rtrInputs[i].value = Math.round(prod / 100) * 100;
+                    prod *= 1.4;
+                }
+                let last = parseFloat(rtrInputs[rampY - 1].value) || 0;
+                for (let i = rampY; i < years; i++) {
+                    last *= (1 + rtrGrowthPct / 100);
+                    rtrInputs[i].value = Math.round(last / 100) * 100;
+                }
+            }
+
+            if (targetEnergyGWh > 0) {
+                const target = targetEnergyGWh;
+                const rampY = energyRampYear - startYear + 1;
+                let prod = target / Math.pow(1.4, rampY - 1);
+                for (let i = 0; i < rampY; i++) {
+                    energyInputs[i].value = Math.round(prod * 10) / 10;
+                    prod *= 1.4;
+                }
+                let last = parseFloat(energyInputs[rampY - 1].value) || 0;
+                for (let i = rampY; i < years; i++) {
+                    last *= (1 + energyGrowthPct / 100);
+                    energyInputs[i].value = Math.round(last * 10) / 10;
+                }
+            }
+
+            updateModel();
+        });
+
+        function saveData() {
+            const data = { assumptions: {}, production: {} };
+            ['shares_out','multiple_growth','multiple_mature','your_shares',
+             'opt_hourly','opt_hours_day','opt_days_year','opt_sales_price','opt_sales_margin','opt_enable',
+             'rt_mileage_km','rt_earnings_mile','rt_days_year','rt_sales_price','rt_sales_margin','rt_enable',
+             'rtr_mileage_km','rtr_earnings_mile','rtr_days_year','rtr_sales_price','rtr_sales_margin','rtr_enable',
+             'energy_hw_rev_per_gwh','energy_hw_margin_pct','energy_recurring_per_gwh_yr','energy_recurring_margin_pct','energy_enable',
+             'target_opt_fleet','opt_ramp_year','opt_growth_pct',
+             'target_rt_fleet','rt_ramp_year','rt_growth_pct',
+             'target_rtr_fleet','rtr_ramp_year','rtr_growth_pct',
+             'target_energy_gwh','energy_ramp_year','energy_growth_pct',
+             'current_tsla_price','usd_eur_rate','avg_buy_price','cgt_rate','cgt_exemption','annual_tax_rate','tax_threshold'
+            ].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) data.assumptions[id] = el.checked !== undefined ? el.checked : el.value;
+            });
+            document.querySelectorAll('.opt_prod, .rt_prod, .rtr_prod, .energy_gwh').forEach(el => {
+                data.production[el.dataset.year + '_' + el.className] = el.value;
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return;
+            const data = JSON.parse(saved);
+            Object.keys(data.assumptions).forEach(key => {
+                const el = document.getElementById(key);
+                if (el) {
+                    if (el.type === 'checkbox') el.checked = data.assumptions[key];
+                    else el.value = data.assumptions[key];
+                }
+            });
+            Object.keys(data.production).forEach(key => {
+                const [yr, type] = key.split('_');
+                const input = document.querySelector(`[data-year="${yr}"].${type}`);
+                if (input) input.value = data.production[key];
+            });
+        }
+
+        function fetchExchangeRate() {
+            fetch('https://api.exchangerate.host/latest?base=USD&symbols=EUR')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('usd_eur_rate').value = data.rates.EUR.toFixed(4);
+                    updateModel();
+                })
+                .catch(error => console.error('Error fetching rate:', error));
+        }
+
+        function fetchTslaPrice() {
+            fetch('https://query1.finance.yahoo.com/v7/finance/quote?symbols=TSLA')
+                .then(response => response.json())
+                .then(data => {
+                    const price = data.quoteResponse.result[0].regularMarketPrice;
+                    document.getElementById('current_tsla_price').value = price.toFixed(2);
+                    updateModel();
+                })
+                .catch(error => console.error('Error fetching TSLA price:', error));
+        }
+
+        function updateModel() {
+            const sharesOut = parseFloat(document.getElementById('shares_out').value) * 1e9 || 3.52e9;
+            const multipleGrowth = parseFloat(document.getElementById('multiple_growth').value) || 40;
+            const multipleMature = parseFloat(document.getElementById('multiple_mature').value) || 25;
+            const yourShares = parseFloat(document.getElementById('your_shares').value) || 0;
+
+            const optEnabled = document.getElementById('opt_enable').checked;
+            const rtEnabled  = document.getElementById('rt_enable').checked;
+            const rtrEnabled = document.getElementById('rtr_enable').checked;
+            const energyEnabled = document.getElementById('energy_enable').checked;
+
+            let optHourly = 0, optHours = 0, optDays = 0, optSalesPrice = 0, optSalesMargin = 0;
+            if (optEnabled) {
+                optHourly = parseFloat(document.getElementById('opt_hourly').value) || 2;
+                optHours = parseFloat(document.getElementById('opt_hours_day').value) || 21;
+                optDays = parseFloat(document.getElementById('opt_days_year').value) || 360;
+                optSalesPrice = parseFloat(document.getElementById('opt_sales_price').value) || 20000;
+                optSalesMargin = parseFloat(document.getElementById('opt_sales_margin').value) / 100 || 0;
+            }
+
+            let rtKmDay = 0, rtEarnMile = 0, rtDays = 0, rtSalesPrice = 0, rtSalesMargin = 0;
+            if (rtEnabled) {
+                rtKmDay = parseFloat(document.getElementById('rt_mileage_km').value) || 350;
+                rtEarnMile = parseFloat(document.getElementById('rt_earnings_mile').value) || 0.2;
+                rtDays = parseFloat(document.getElementById('rt_days_year').value) || 360;
+                rtSalesPrice = parseFloat(document.getElementById('rt_sales_price').value) || 25000;
+                rtSalesMargin = parseFloat(document.getElementById('rt_sales_margin').value) / 100 || 0;
+            }
+
+            let rtrKmDay = 0, rtrEarnMile = 0, rtrDays = 0, rtrSalesPrice = 0, rtrSalesMargin = 0;
+            if (rtrEnabled) {
+                rtrKmDay = parseFloat(document.getElementById('rtr_mileage_km').value) || 500;
+                rtrEarnMile = parseFloat(document.getElementById('rtr_earnings_mile').value) || 2;
+                rtrDays = parseFloat(document.getElementById('rtr_days_year').value) || 360;
+                rtrSalesPrice = parseFloat(document.getElementById('rtr_sales_price').value) || 250000;
+                rtrSalesMargin = parseFloat(document.getElementById('rtr_sales_margin').value) / 100 || 0;
+            }
+
+            let energyHwRevPerGWh = 0, energyHwMargin = 0, energyRecurringPerGWhYr = 0, energyRecurringMargin = 0;
+            if (energyEnabled) {
+                energyHwRevPerGWh = parseFloat(document.getElementById('energy_hw_rev_per_gwh').value) || 280000000;
+                energyHwMargin = parseFloat(document.getElementById('energy_hw_margin_pct').value) / 100 || 0.32;
+                energyRecurringPerGWhYr = parseFloat(document.getElementById('energy_recurring_per_gwh_yr').value) || 3500000;
+                energyRecurringMargin = parseFloat(document.getElementById('energy_recurring_margin_pct').value) / 100 || 0.80;
+            }
+
+            const currentPrice = parseFloat(document.getElementById('current_tsla_price').value) || 0;
+            const rate = parseFloat(document.getElementById('usd_eur_rate').value) || 0.86;
+            const avgBuy = parseFloat(document.getElementById('avg_buy_price').value) || 280;
+            const cgtPct = parseFloat(document.getElementById('cgt_rate').value) / 100 || 0.10;
+            const cgtExemption = parseFloat(document.getElementById('cgt_exemption').value) || 10000;
+            const annualPct = parseFloat(document.getElementById('annual_tax_rate').value) / 100 || 0.003;
+            const threshold = parseFloat(document.getElementById('tax_threshold').value) || 1000000;
+
+            const optRampYear = parseInt(document.getElementById('opt_ramp_year').value) || 2040;
+            const rtRampYear = parseInt(document.getElementById('rt_ramp_year').value) || 2040;
+            const rtrRampYear = parseInt(document.getElementById('rtr_ramp_year').value) || 2040;
+            const energyRampYear = parseInt(document.getElementById('energy_ramp_year').value) || 2040;
+
+            const lastRampYear = Math.max(optRampYear, rtRampYear, rtrRampYear, energyRampYear);
+            const transitionStartYear = lastRampYear + 1;
+            const transitionEndYear = transitionStartYear + PE_TRANSITION_YEARS - 1;
+
+            const optRevPerUnit = optHourly * optHours * optDays;
+            const rtRevPerUnit  = (rtKmDay * 0.621371) * rtDays * rtEarnMile;
+            const rtrRevPerUnit = (rtrKmDay * 0.621371) * rtrDays * rtrEarnMile;
+
+            const optSalesProfit = optSalesPrice * optSalesMargin;
+            const rtSalesProfit  = rtSalesPrice * rtSalesMargin;
+            const rtrSalesProfit = rtrSalesPrice * rtrSalesMargin;
+
+            const optRevStr = optRevPerUnit.toLocaleString(undefined, {maximumFractionDigits: 0});
+            const rtRevStr  = rtRevPerUnit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const rtrRevStr = rtrRevPerUnit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            document.getElementById('optRevTitle').textContent = `Optimus Revenue ($B) – $${optRevStr}/unit/yr + $${optSalesProfit.toLocaleString()} sales`;
+            document.getElementById('rtRevTitle').textContent  = `Robotaxi Revenue ($B) – $${rtRevStr}/unit/yr + $${rtSalesProfit.toLocaleString()} sales`;
+            document.getElementById('rtrRevTitle').textContent = `Robotruck Revenue ($B) – $${rtrRevStr}/unit/yr + $${rtrSalesProfit.toLocaleString()} sales`;
+
+            const optProd = document.querySelectorAll('.opt_prod');
+            const optFleetCells = document.querySelectorAll('.opt_fleet');
+            const rtProd = document.querySelectorAll('.rt_prod');
+            const rtFleetCells = document.querySelectorAll('.rt_fleet');
+            const rtrProd = document.querySelectorAll('.rtr_prod');
+            const rtrFleetCells = document.querySelectorAll('.rtr_fleet');
+            const energyGwhInputs = document.querySelectorAll('.energy_gwh');
+            const energyCumCells = document.querySelectorAll('.energy_cum');
+            const optContribCells = document.querySelectorAll('.yearly-opt-contrib');
+            const rtContribCells  = document.querySelectorAll('.yearly-rt-contrib');
+            const rtrContribCells = document.querySelectorAll('.yearly-rtr-contrib');
+            const energyContribCells = document.querySelectorAll('.yearly-energy-contrib');
+            const priceCells = document.querySelectorAll('.yearly-price');
+            const marketCapCells = document.querySelectorAll('.yearly-marketcap');
+            const portfolioCells = document.querySelectorAll('.yearly-portfolio');
+            const portfolioEurCells = document.querySelectorAll('.yearly-portfolio-eur');
+            const annualTaxCells = document.querySelectorAll('.yearly-annual-tax');
+
+            let optCum = 0, rtCum = 0, rtrCum = 0, energyCumGWh = 0;
+            const optCumArr = [], rtCumArr = [], rtrCumArr = [], energyCumArr = [], priceArr = [], optRevArr = [], rtRevArr = [], rtrRevArr = [], energyRevArr = [], salesProfitArr = [],
+                  optAnnualArr = [], rtAnnualArr = [], rtrAnnualArr = [], energyAnnualArr = [], netPortfolioEurArr = [];
+
+            for (let i = 0; i < years; i++) {
+                const year = startYear + i;
+
+                const op = optEnabled ? (parseFloat(optProd[i].value) || 0) : 0;
+                const rp = rtEnabled ? (parseFloat(rtProd[i].value) || 0) : 0;
+                const rtrp = rtrEnabled ? (parseFloat(rtrProd[i].value) || 0) : 0;
+                const energyDeployGWh = energyEnabled ? (parseFloat(energyGwhInputs[i].value) || 0) : 0;
+
+                optCum += op;
+                rtCum += rp;
+                rtrCum += rtrp;
+                energyCumGWh += energyDeployGWh;
+
+                optCumArr.push(optCum);
+                rtCumArr.push(rtCum);
+                rtrCumArr.push(rtrCum);
+                energyCumArr.push(energyCumGWh);
+                optAnnualArr.push(op);
+                rtAnnualArr.push(rp);
+                rtrAnnualArr.push(rtrp);
+                energyAnnualArr.push(energyDeployGWh);
+
+                optFleetCells[i].textContent = optCum.toLocaleString();
+                rtFleetCells[i].textContent = rtCum.toLocaleString();
+                rtrFleetCells[i].textContent = rtrCum.toLocaleString();
+                energyCumCells[i].textContent = energyCumGWh.toFixed(1);
+
+                const optRecB = optEnabled ? (optCum * optRevPerUnit) / 1e9 : 0;
+                const rtRecB  = rtEnabled  ? (rtCum  * rtRevPerUnit)  / 1e9 : 0;
+                const rtrRecB = rtrEnabled ? (rtrCum * rtrRevPerUnit) / 1e9 : 0;
+                const energyRecB = energyEnabled ? (energyCumGWh * energyRecurringPerGWhYr * energyRecurringMargin) / 1e9 : 0;
+
+                const optSalesB = optEnabled ? (op * optSalesProfit) / 1e9 : 0;
+                const rtSalesB  = rtEnabled  ? (rp  * rtSalesProfit) / 1e9 : 0;
+                const rtrSalesB = rtrEnabled ? (rtrp * rtrSalesProfit) / 1e9 : 0;
+                const energyHwProfitB = energyEnabled ? (energyDeployGWh * energyHwRevPerGWh * energyHwMargin) / 1e9 : 0;
+
+                const totalSalesB = optSalesB + rtSalesB + rtrSalesB + energyHwProfitB;
+                const totalRevB = optRecB + rtRecB + rtrRecB + energyRecB + totalSalesB;
+
+                let effectiveMultiple;
+                if (year <= lastRampYear) {
+                    effectiveMultiple = multipleGrowth;
+                } else if (year >= transitionStartYear && year <= transitionEndYear) {
+                    const yearsIntoTransition = year - transitionStartYear + 1;
+                    const blendFactor = yearsIntoTransition / PE_TRANSITION_YEARS;
+                    effectiveMultiple = multipleGrowth * (1 - blendFactor) + multipleMature * blendFactor;
+                } else {
+                    effectiveMultiple = multipleMature;
+                }
+
+                const optValThisYear   = (optRecB   + optSalesB)   * 1e9 * effectiveMultiple;
+                const rtValThisYear    = (rtRecB    + rtSalesB)    * 1e9 * effectiveMultiple;
+                const rtrValThisYear   = (rtrRecB   + rtrSalesB)   * 1e9 * effectiveMultiple;
+                const energyValThisYear = (energyRecB + energyHwProfitB) * 1e9 * effectiveMultiple;
+
+                const optContrib   = optEnabled   ? optValThisYear   / sharesOut : 0;
+                const rtContrib    = rtEnabled    ? rtValThisYear    / sharesOut : 0;
+                const rtrContrib   = rtrEnabled   ? rtrValThisYear   / sharesOut : 0;
+                const energyContrib = energyEnabled ? energyValThisYear / sharesOut : 0;
+
+                const totalVal = totalRevB * 1e9 * effectiveMultiple;
+                const perShare = totalVal / sharesOut;
+                const marketCapT = (totalVal / 1e12).toFixed(1);
+                const portfolioVal = perShare * yourShares;
+
+                optContribCells[i].textContent   = '$' + Math.round(optContrib);
+                rtContribCells[i].textContent    = '$' + Math.round(rtContrib);
+                rtrContribCells[i].textContent   = '$' + Math.round(rtrContrib);
+                energyContribCells[i].textContent = '$' + Math.round(energyContrib);
+
+                priceCells[i].textContent = '$' + Math.round(perShare);
+                marketCapCells[i].textContent = marketCapT;
+                portfolioCells[i].textContent = '$' + portfolioVal.toLocaleString(undefined, {maximumFractionDigits:0});
+                priceArr.push(perShare);
+
+                const portfolioEurYearly = portfolioVal * rate;
+                let annualTaxYearly = 0;
+                if (portfolioEurYearly > threshold) {
+                    annualTaxYearly = (portfolioEurYearly - threshold) * annualPct;
+                }
+                portfolioEurCells[i].textContent = '€' + Math.round(portfolioEurYearly).toLocaleString();
+                annualTaxCells[i].textContent = '€' + Math.round(annualTaxYearly).toLocaleString();
+
+                optRevArr.push(optRecB + optSalesB);
+                rtRevArr.push(rtRecB + rtSalesB);
+                rtrRevArr.push(rtrRecB + rtrSalesB);
+                energyRevArr.push(energyRecB + energyHwProfitB);
+                salesProfitArr.push(totalSalesB);
+                netPortfolioEurArr.push(portfolioEurYearly);
+            }
+
+            const finalOptRecB = optEnabled ? (optCum * optRevPerUnit) / 1e9 : 0;
+            const finalRtRecB  = rtEnabled  ? (rtCum  * rtRevPerUnit)  / 1e9 : 0;
+            const finalRtrRecB = rtrEnabled ? (rtrCum * rtrRevPerUnit) / 1e9 : 0;
+            const finalEnergyRecB = energyEnabled ? (energyCumGWh * energyRecurringPerGWhYr * energyRecurringMargin) / 1e9 : 0;
+
+            const finalOptSalesB = optEnabled ? (optProd[years-1].value * optSalesProfit) / 1e9 : 0;
+            const finalRtSalesB  = rtEnabled  ? (rtProd[years-1].value  * rtSalesProfit) / 1e9 : 0;
+            const finalRtrSalesB = rtrEnabled ? (rtrProd[years-1].value * rtrSalesProfit) / 1e9 : 0;
+            const finalEnergyHwB = energyEnabled ? (energyGwhInputs[years-1].value * energyHwRevPerGWh * energyHwMargin) / 1e9 : 0;
+
+            const optVal = (finalOptRecB + finalOptSalesB) * multipleMature;
+            const rtVal  = (finalRtRecB  + finalRtSalesB)  * multipleMature;
+            const rtrVal = (finalRtrRecB + finalRtrSalesB) * multipleMature;
+            const energyVal = (finalEnergyRecB + finalEnergyHwB) * multipleMature;
+            const combVal = optVal + rtVal + rtrVal + energyVal;
+
+            const optPer = optVal * 1e9 / sharesOut;
+            const rtPer = rtVal * 1e9 / sharesOut;
+            const rtrPer = rtrVal * 1e9 / sharesOut;
+            const energyPer = energyVal * 1e9 / sharesOut;
+            const combPer = combVal * 1e9 / sharesOut;
+            const portVal = combPer * yourShares;
+
+            const optSalesPer = (finalOptSalesB * multipleMature * 1e9) / sharesOut;
+            const rtSalesPer  = (finalRtSalesB  * multipleMature * 1e9) / sharesOut;
+            const rtrSalesPer = (finalRtrSalesB * multipleMature * 1e9) / sharesOut;
+            const energySalesPer = (finalEnergyHwB * multipleMature * 1e9) / sharesOut;
+
+            document.getElementById('optPerShare').textContent = '$' + Math.round(optPer).toLocaleString();
+            document.getElementById('optSalesPerShare').textContent = '$' + Math.round(optSalesPer).toLocaleString();
+            document.getElementById('rtPerShare').textContent = '$' + Math.round(rtPer).toLocaleString();
+            document.getElementById('rtSalesPerShare').textContent = '$' + Math.round(rtSalesPer).toLocaleString();
+            document.getElementById('rtrPerShare').textContent = '$' + Math.round(rtrPer).toLocaleString();
+            document.getElementById('rtrSalesPerShare').textContent = '$' + Math.round(rtrSalesPer).toLocaleString();
+            document.getElementById('energyPerShare').textContent = '$' + Math.round(energyPer).toLocaleString();
+            document.getElementById('energySalesPerShare').textContent = '$' + Math.round(energySalesPer).toLocaleString();
+            document.getElementById('combinedPerShare').textContent = '$' + Math.round(combPer).toLocaleString();
+
+            document.getElementById('yourSharesDisplay').textContent = yourShares.toLocaleString();
+            document.getElementById('portfolioValue').textContent = '$' + portVal.toLocaleString(undefined, {maximumFractionDigits:0});
+
+            const costBasisEur = yourShares * avgBuy;
+            const futurePortfolioEur = portVal * rate;
+            const gainEurVal = futurePortfolioEur - costBasisEur;
+            const taxableGain = Math.max(0, gainEurVal - cgtExemption);
+            const cgtDueVal = taxableGain * cgtPct;
+            const netEurVal = futurePortfolioEur - cgtDueVal;
+            let annualTaxFinal = 0;
+            if (futurePortfolioEur > threshold) {
+                annualTaxFinal = (futurePortfolioEur - threshold) * annualPct;
+            }
+
+            document.getElementById('portfolioEur').textContent = '€' + Math.round(futurePortfolioEur).toLocaleString();
+            document.getElementById('gainEur').textContent = '€' + Math.round(gainEurVal).toLocaleString();
+            document.getElementById('cgtDue').textContent = '€' + Math.round(cgtDueVal).toLocaleString();
+            document.getElementById('netEur').textContent = '€' + Math.round(netEurVal).toLocaleString();
+            document.getElementById('annualTax').textContent = '€' + Math.round(annualTaxFinal).toLocaleString();
+
+            fleetLineChart.data.datasets[0].data = optCumArr;
+            fleetLineChart.data.datasets[1].data = rtCumArr;
+            fleetLineChart.data.datasets[2].data = rtrCumArr;
+            fleetLineChart.update();
+
+            optProdChart.data.datasets[0].data = optAnnualArr;
+            optProdChart.data.datasets[1].data = optCumArr;
+            optProdChart.update();
+
+            rtProdChart.data.datasets[0].data = rtAnnualArr;
+            rtProdChart.data.datasets[1].data = rtCumArr;
+            rtProdChart.update();
+
+            rtrProdChart.data.datasets[0].data = rtrAnnualArr;
+            rtrProdChart.data.datasets[1].data = rtrCumArr;
+            rtrProdChart.update();
+
+            energyProdChart.data.datasets[0].data = energyAnnualArr;
+            energyProdChart.data.datasets[1].data = energyCumArr;
+            energyProdChart.update();
+
+            sharePriceChart.data.datasets[0].data = priceArr;
+            sharePriceChart.update();
+
+            netPortfolioEurChart.data.datasets[0].data = netPortfolioEurArr;
+            netPortfolioEurChart.update();
+
+            optRevChart.data.datasets[0].data = optRevArr;
+            optRevChart.update();
+
+            rtRevChart.data.datasets[0].data = rtRevArr;
+            rtRevChart.update();
+
+            rtrRevChart.data.datasets[0].data = rtrRevArr;
+            rtrRevChart.update();
+
+            energyRevChart.data.datasets[0].data = energyRevArr;
+            energyRevChart.update();
+
+            salesProfitChart.data.datasets[0].data = salesProfitArr;
+            salesProfitChart.update();
+
+            saveData();
+        }
+
+        function exportToCsv() {
+            let csvLines = [];
+
+            const today = new Date().toISOString().split('T')[0];
+            csvLines.push(`Tesla Multi-Stream Model Export`);
+            csvLines.push(`Exported on,${today}`);
+            csvLines.push(`Model version,Smooth PE Transition v5`);
+            csvLines.push(``);
+
+            csvLines.push(`ASSUMPTIONS`);
+            csvLines.push(`Diluted Shares (billions),${document.getElementById('shares_out').value}`);
+            csvLines.push(`Growth Phase PE,${document.getElementById('multiple_growth').value}`);
+            csvLines.push(`Mature Phase PE,${document.getElementById('multiple_mature').value}`);
+            csvLines.push(`Your Shares Owned,${document.getElementById('your_shares').value}`);
+            csvLines.push(``);
+
+            csvLines.push(`Optimus Settings`);
+            csvLines.push(`Enabled,${document.getElementById('opt_enable').checked ? 'Yes' : 'No'}`);
+            csvLines.push(`Effective $/hr,${document.getElementById('opt_hourly').value}`);
+            csvLines.push(`Hours/Day,${document.getElementById('opt_hours_day').value}`);
+            csvLines.push(`Days/Year,${document.getElementById('opt_days_year').value}`);
+            csvLines.push(`Sales Price ($),${document.getElementById('opt_sales_price').value}`);
+            csvLines.push(`Gross Margin %,${document.getElementById('opt_sales_margin').value}`);
+            csvLines.push(``);
+
+            csvLines.push(`Robotaxi Settings`);
+            csvLines.push(`Enabled,${document.getElementById('rt_enable').checked ? 'Yes' : 'No'}`);
+            csvLines.push(`Avg km/day,${document.getElementById('rt_mileage_km').value}`);
+            csvLines.push(`Net $/mile,${document.getElementById('rt_earnings_mile').value}`);
+            csvLines.push(`Days/Year,${document.getElementById('rt_days_year').value}`);
+            csvLines.push(`Sales Price ($),${document.getElementById('rt_sales_price').value}`);
+            csvLines.push(`Gross Margin %,${document.getElementById('rt_sales_margin').value}`);
+            csvLines.push(``);
+
+            csvLines.push(`Robotruck Settings`);
+            csvLines.push(`Enabled,${document.getElementById('rtr_enable').checked ? 'Yes' : 'No'}`);
+            csvLines.push(`Avg km/day,${document.getElementById('rtr_mileage_km').value}`);
+            csvLines.push(`Net $/mile,${document.getElementById('rtr_earnings_mile').value}`);
+            csvLines.push(`Days/Year,${document.getElementById('rtr_days_year').value}`);
+            csvLines.push(`Sales Price ($),${document.getElementById('rtr_sales_price').value}`);
+            csvLines.push(`Gross Margin %,${document.getElementById('rtr_sales_margin').value}`);
+            csvLines.push(``);
+
+            csvLines.push(`Energy Storage Settings`);
+            csvLines.push(`Enabled,${document.getElementById('energy_enable').checked ? 'Yes' : 'No'}`);
+            csvLines.push(`Hardware Revenue $/GWh,${document.getElementById('energy_hw_rev_per_gwh').value}`);
+            csvLines.push(`Hardware Gross Margin %,${document.getElementById('energy_hw_margin_pct').value}`);
+            csvLines.push(`Recurring $/GWh installed/yr,${document.getElementById('energy_recurring_per_gwh_yr').value}`);
+            csvLines.push(`Recurring Gross Margin %,${document.getElementById('energy_recurring_margin_pct').value}`);
+            csvLines.push(``);
+
+            csvLines.push(`Currency & Tax Settings`);
+            csvLines.push(`Current TSLA Price ($),${document.getElementById('current_tsla_price').value}`);
+            csvLines.push(`USD to EUR Rate,${document.getElementById('usd_eur_rate').value}`);
+            csvLines.push(`Average Buy Price (€/share),${document.getElementById('avg_buy_price').value}`);
+            csvLines.push(`Capital Gains Tax %,${document.getElementById('cgt_rate').value}`);
+            csvLines.push(`CGT Exemption (€),${document.getElementById('cgt_exemption').value}`);
+            csvLines.push(`Annual Wealth Tax %,${document.getElementById('annual_tax_rate').value}`);
+            csvLines.push(`Tax Threshold (€),${document.getElementById('tax_threshold').value}`);
+            csvLines.push(``);
+
+            csvLines.push(`QUICK-SET 2040 TARGETS & RAMPS`);
+            csvLines.push(`Stream,Target Fleet,Ramp by Year,Growth %/yr after ramp`);
+            csvLines.push(`Optimus (millions),${document.getElementById('target_opt_fleet').value},${document.getElementById('opt_ramp_year').value},${document.getElementById('opt_growth_pct').value}`);
+            csvLines.push(`Robotaxi (millions),${document.getElementById('target_rt_fleet').value},${document.getElementById('rt_ramp_year').value},${document.getElementById('rt_growth_pct').value}`);
+            csvLines.push(`Robotruck (thousands),${document.getElementById('target_rtr_fleet').value},${document.getElementById('rtr_ramp_year').value},${document.getElementById('rtr_growth_pct').value}`);
+            csvLines.push(`Energy Storage (GWh/yr),${document.getElementById('target_energy_gwh').value},${document.getElementById('energy_ramp_year').value},${document.getElementById('energy_growth_pct').value}`);
+            csvLines.push(``);
+
+            const headers = Array.from(document.querySelectorAll('table th')).map(th => `"${th.textContent.trim().replace(/"/g, '""')}"`);
+            csvLines.push(headers.join(','));
+
+            const rows = document.querySelectorAll('#yearTable tr');
+            rows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td')).map(td => {
+                    let val;
+                    const input = td.querySelector('input');
+                    if (input) {
+                        val = input.value.trim();
+                    } else {
+                        val = td.textContent.trim();
+                    }
+                    if (val === '—') val = '';
+                    if (val.includes(',') || val.includes('"') || val.match(/^\$/) || val.includes('T') || val.match(/^\€/)) {
+                        val = `"${val.replace(/"/g, '""')}"`;
+                    }
+                    return val;
+                });
+                csvLines.push(cells.join(','));
+            });
+
+            const csv = csvLines.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tesla_model_full_${today}.csv`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialization
+        buildTable();
+        initCharts();
+        updateModel();
+
+        document.querySelectorAll('input').forEach(el => el.addEventListener('input', updateModel));
+        document.getElementById('exportCsvBtn').addEventListener('click', exportToCsv);
+
+        // PWA Service Worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered!', reg))
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
