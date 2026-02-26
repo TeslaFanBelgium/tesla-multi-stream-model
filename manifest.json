@@ -2,7 +2,7 @@
   "name": "Tesla Multi-Stream Model 2026–2040",
   "short_name": "Tesla Model",
   "description": "Optimus • Robotaxi • Robotruck • Energy Storage Valuation",
-  "start_url": "/index.html",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#f8f9fa",
   "theme_color": "#1a1a1a",
